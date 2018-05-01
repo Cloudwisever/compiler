@@ -1,0 +1,64 @@
+#ifndef _TABLE_H
+#define _TABLE_H
+#include<stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "syntax_tree.h"
+
+
+#define TABLE_SIZE  0x3ff
+
+typedef struct Type_* Type;
+typedef struct FieldList_* FieldList;
+
+struct Type_
+{
+	enum {BASIC, ARRAY, STRUCTURE} kind;
+	Type pTypeList;//for functions, need multiple types
+	union
+	{
+		int basic;//int:0 float:1
+		struct {Type elem; int size;} array;
+		FieldList structure;
+	}u;
+};
+
+struct FieldList_
+{
+	char* name;
+	Type type;
+	FieldList next;
+};
+
+typedef struct SymbolItem_* SymbolItem;
+
+struct SymbolItem_
+{
+	char name[32];
+	Type SymbolType;
+	int initialized;
+	int type_num;//varible: 0 structure field type: 1 
+	SymbolItem next;
+};
+
+typedef struct HashItem_* HashItem;
+typedef struct HashItem_ Hashdef;
+struct HashItem_
+{
+	int current_num;
+	SymbolItem symbol;
+	HashItem next;
+};
+
+
+unsigned int hash_pjw(char* name);
+HashItem SymbolTable_Find(HashItem *symbol_tab, char* name);
+int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym);
+
+SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType);
+SymbolItem HandleDec(Syntax_Leaf* root, Type decType);
+FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType);
+FieldList HandleDefList(Syntax_Leaf* root, FieldList tail);
+Type HandleSpecifier(Syntax_Leaf* spe_root);
+
+#endif

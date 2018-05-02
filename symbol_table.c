@@ -33,12 +33,22 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 {
 	int returnval = 0;
 	int index = hash_pjw(sym->name);
+	
 	HashItem head = symbol_tab[index];
 	
 	HashItem find = SymbolTable_Find(symbol_tab, sym->name);
 	if(find == NULL)
 	{
-		while(head != 0)
+		printf("adding: %s\n", sym->name);
+		if(head == NULL)
+		{
+			HashItem newone = (HashItem)malloc(sizeof(struct HashItem_));
+			memset(newone, 0, sizeof(struct HashItem_));
+			newone->symbol = sym;
+			symbol_tab[index] = newone;
+			return 1;
+		}
+		while(head != NULL)
 		{
 			if(strcmp(sym->name, head->symbol->name) < 0)
 			{
@@ -74,19 +84,126 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 	}
 }
 
-HashItem symbol_table[TABLE_SIZE];
-		
-HashItem SymbolTable_create(Syntax_Leaf* Syntax_Root)
-{}
+void SymbolItem_Print(SymbolItem sym)
+{
+	//printf("test\n");
+	//printf("printf in print %p %i %s\n", sym->SymbolType, sym->kind, sym->name);
+	//printf("%i\n",sym->SymbolType->kind);
+	printf("%s\t", sym->name);
+	if(sym->kind == STRUCTNAME)
+	{
+		printf("STRUCT\t");
+	}
+	else if(sym->kind == VARIABLE)
+	{
+		printf("VAR\t");
+	}
+	else if(sym->kind == STRUCTFIELD)
+	{
+		printf("FIELD\t");
+	}
+	else
+		printf("BAD kind: %i\t", sym->kind);
+	
+	if(sym->SymbolType->kind == BASIC)
+	{
+		printf("BASIC\t");
+	}
+	else if(sym->SymbolType->kind == ARRAY)
+	{
+		printf("ARRAY\t");
+	}
+	else if(sym->SymbolType->kind == STRUCTURE)
+	{
+		printf("STRUCTURE\t");
+	}
+	else
+		printf("BAD symbol kind: %i\t", sym->SymbolType->kind);
 
-Type HandleSpecifier(Syntax_Leaf* spe_root)
+	/*
+	int k = sym->kind;
+	printf("k :%i", k);
+	switch(k)
+	{
+	case 0:	printf("VAR\t");break;
+	case 1:	printf("STRUCT\t");break;
+	case 2:printf("FIELD\t");break;
+	default: printf("BAD kind: %i\t", sym->kind);
+	}
+	k = sym->SymbolType->kind;
+	switch(k)
+	{
+	case 0:	printf("BASIC\t");break;
+	case 1:	printf("ARRAY\t");break;
+	case 2:printf("SRUCTURE\t");break;
+	}*/
+	
+	//printf("BAD kind: %i\t", sym->kind);
+	printf("\n");
+}
+
+void SymbolTable_Print(HashItem* Symbol_Table)
+{
+	int i;
+	printf("NAME\tKIND\tTYPE\n");
+	
+	//HashItem ap = SymbolTable_Find(symbol_table, "p");
+	/*if(ap==NULL)
+	{
+		printf("p not added.\n");
+	}
+	else
+	{
+		printf("printing:\n");
+		SymbolItem_Print(ap->symbol);
+	}*/
+	for(i = 0; i < TABLE_SIZE; i++)
+	{
+		HashItem cur = Symbol_Table[i];
+		while(cur != NULL)
+		{
+			//printf("cur: %p, cur->sym->name: %s cur->sym->kind: %i\n",cur, cur->symbol->name, cur->symbol->kind);
+			SymbolItem_Print(cur->symbol);
+			cur = cur->next;
+		}
+	}
+}
+
+		
+
+HashItem SymbolTable_Create(Syntax_Leaf* root)
+{
+	if(strcmp(root->name, "Specifier") == 0)
+	{
+		HandleSpecifier(root);
+	}
+	int i = 0;
+	while(i < root->childrennum)
+	{
+		if(root->children[i] == NULL)
+		{
+			i++;
+			continue;
+		}
+		SymbolTable_Create(root->children[i++]);
+	}
+}
+
+
+
+Type HandleSpecifier(Syntax_Leaf* root)//int, float, struct a: deal with memory leaking.
 {	
+	printf("handling specifier at line %i\n", root->lineno);
 	Type newone = (Type)malloc(sizeof(struct Type_));
 	memset(newone, 0, sizeof(struct Type_));
 	
-	if (spe_root->children[0]->type == TYPE_)
+	printf("root->children[0]->type: %i name: %s\n", root->children[0]->type,root->children[0]->name);
+	Syntax_Leaf* spe_root = root->children[0];
+	
+	if (root->children[0]->type == TYPE_)
 	{
 		newone->kind = BASIC;
+		printf("content: %s\n", spe_root->content);
 		if(strcmp(spe_root->content, "int") == 0)
 		{
 			newone->u.basic = 0;
@@ -100,9 +217,11 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			printf("unknown type: %s\n", spe_root->content);
 		}
 	}
-	else if (spe_root->children[0]->type == TOKEN_ && strcmp(spe_root->children[1]->name, "OptTag") == 0)//StructSpecifier, declare a structure
+	else if ( strcmp(spe_root->children[1]->name, "OptTag") == 0)//StructSpecifier, declare a structure
 	{
 		newone->kind = STRUCTURE;
+		
+		//printf("declar a struct: %s\n", spe_root->children[1]->name);
 	
 		Syntax_Leaf* deflist = spe_root->children[3];//DefList
 		int i;
@@ -112,23 +231,35 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			
 		newone->u.structure = newfield;
 		
-		HandleDefList(spe_root->children[3], newone->u.structure, STRUCTUREFIELD);
+		//printf("u.structure before: %p\n", newone->u.structure);
 		
+		HandleDefList(spe_root->children[3], newone->u.structure, STRUCTFIELD);
+		
+		//printf("u.structure after: %p\n", newone->u.structure);
+		
+		//printf("u.structure.next type: %p %s\n", newone->u.structure->next,newone->u.structure->next->name);
+		//u.structure is the head node of the fieldlist. have to skip the head node.
+		FieldList tmp = newone->u.structure->next;
+		newone->u.structure->name = newone->u.structure->next->name;
+		newone->u.structure->type = newone->u.structure->next->type;
+		newone->u.structure->next = newone->u.structure->next->next;
+		free(tmp);
 		char* struct_name = NULL;
-		if(spe_root->children[1] == NULL)//OptTag is empty
+		if(spe_root->children[1]->children[0] == NULL)//OptTag is empty
 		{	
 		}
-		else if(spe_root->children[1] != NULL)
+		else if(spe_root->children[1]->children[0] != NULL)
 		{
-			struct_name = spe_root->children[1]->content;
+			struct_name = spe_root->children[1]->children[0]->content;
 			//if the structure has a name, build a symbol table item for it.
 			SymbolItem newitem = (SymbolItem)malloc(sizeof(struct SymbolItem_));
 			memset(newitem, 0, sizeof(struct SymbolItem_));
 			
 			strcpy(newitem->name, struct_name);
+			printf("type kind:%p\n", newone->u.structure->type);
 			newitem->SymbolType = newone->u.structure->type;
 			newitem->kind = STRUCTNAME;
-			newitem->lineno = spe_root->children[1]->lineno;
+			newitem->lineno = spe_root->children[1]->children[0]->lineno;
 			
 			int rec = SymbolTable_Add(symbol_table, newitem);
 			if(rec == 2)//error type 16
@@ -161,19 +292,65 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			newfield->name = struct_name;	
 		}*/
 	}
-	else if (spe_root->children[0]->type == TOKEN_ && strcmp(spe_root->children[1]->name, "Tag") == 0)//StructSpecifier, use a structure already declared.
+	else if (strcmp(spe_root->children[0]->children[1]->name, "Tag") == 0)//StructSpecifier, use a structure already declared.
 	{
+		Syntax_Leaf* tag = spe_root->children[1];
+		HashItem rechash = SymbolTable_Find(symbol_table, tag->children[0]->content);
+		SymbolItem rec = rechash->symbol;
 		
+		if(rec == NULL)//error type 17
+		{
+			printf("Error type 17 at Line %i: Undefined structure \" %s \",\n", tag->lineno, rec->name);
+			//return a special basic type
+			newone->kind = BASIC;
+			newone->u.basic = 2;
+		}
+		else
+		{
+			newone->kind = rec->SymbolType->kind;
+			newone->u = rec->SymbolType->u;
+		}
 	}
 	else
 	{
-		printf("unknown Specifier's child: %s\n", spe_root->children[1]->name);
+		printf("unknown StructSpecifier's child: %s, cmp : % i type: %i, TOKEN_ : %i\n", spe_root->children[1]->name, strcmp(spe_root->children[1]->name, "OptTag"), spe_root->children[0]->type, TOKEN_);
 	}
 	return newone;
 }
+/*
+void HandleExtDef(Syntax_Leaf* root)
+{
+	
+	Type extdeftype = HandleSpecifier(root->children[0]);
+	if(strcmp(root->children[1]->name, "ExtDecList") == 0)
+	{
+		//since the ExtDecList is same as DecList, we can just use the HandleDecList() to fill the symbol table.
+		HandleDecList(root->children[1], NULL, extdeftype, VARIABLE);
+	}
+	else if(strcmp(root->children[1]->name, "SEMI") == 0)
+	{
+		//to add the structure into the symbol table, the HandleSpecifier() has done that. So no need to do anything.
+	}
+	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "SEMI") == 0)//Function declare
+	{
+		HandleFunDec(root->children[1]);
+	}
+	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "CompSt") == 0)
+	{
+	}
+}
+
+void HandleFunDec(Syntax_Leaf* root, Type returnType)
+{
+	Syntax_Leaf* id = root->children[0];
+}
+*/
+		
+		
 
 FieldList HandleDefList(Syntax_Leaf* root, FieldList tail, int deflist_type)
 {
+	//printf("handling deflist at line %i\n", root->lineno);
 	Syntax_Leaf* cur_deflist = root;
 
 	while(cur_deflist != NULL)
@@ -193,9 +370,9 @@ FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int def
 	do{
 		SymbolItem dec = HandleDec(cur_declist->children[0], decType, deflist_type);
 		
-		if(deflist_type == STRUCTUREFIELD || tail != NULL)
+		if(deflist_type == STRUCTFIELD || tail != NULL)
 		{
-			dec->type_num = STRUCTFIELD;
+			dec->kind = STRUCTFIELD;
 			
 			FieldList newfield = (FieldList)malloc(sizeof(struct FieldList_));
 			memset(newfield, 0, sizeof(struct FieldList_));
@@ -207,7 +384,7 @@ FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int def
 			tail = newfield;
 		}
 		else
-			dec->type_num = VARIABLE;
+			dec->kind = VARIABLE;
 		
 		cur_declist = cur_declist->children[2];
 	}while(cur_declist != NULL);
@@ -227,7 +404,7 @@ SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 	{
 		var->initialized = 1;
 		
-		if(deflist_type == STRUCTREFIELD)//error 15: trying to initialize field in structure
+		if(deflist_type == STRUCTFIELD)//error 15: trying to initialize field in structure
 		{
 			printf("Error type 15 at Line %i: trying to initialize field \" %s \" in structure.\n", var->lineno, var->name);
 		}
@@ -237,6 +414,7 @@ SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 
 SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 {
+	//printf("handling vardec at line %i\n", var_root->lineno);
 	Syntax_Leaf* root = var_root;
 	Type cur_type = decType;
 	while(root->children[0]->type == TOKEN_)
@@ -275,8 +453,9 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 		int rec = SymbolTable_Add(symbol_table, newid);
 		if(rec == 2)
 		{
-			SymbolItem conflict = find(symbol_table, newid->name);
-			if(deflist_type == STRUCTUREFIELD)
+			HashItem conflicthash = SymbolTable_Find(symbol_table, newid->name);
+			SymbolItem conflict = conflicthash->symbol;
+			if(deflist_type == STRUCTFIELD)
 			{
 				if(conflict->kind == VARIABLE)
 				{
@@ -302,6 +481,7 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 	return newid;
 }
 		
+
 		
 
 

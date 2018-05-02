@@ -14,10 +14,9 @@ typedef struct FieldList_* FieldList;
 struct Type_
 {
 	enum {BASIC, ARRAY, STRUCTURE} kind;
-	Type pTypeList;//for functions, need multiple types
 	union
 	{
-		int basic;//int:0 float:1
+		int basic;//int:0 float:1 structure not declared: 2
 		struct {Type elem; int size;} array;
 		FieldList structure;
 	}u;
@@ -52,14 +51,21 @@ struct HashItem_
 };
 
 
+HashItem symbol_table[TABLE_SIZE];
+
+
 unsigned int hash_pjw(char* name);
 HashItem SymbolTable_Find(HashItem *symbol_tab, char* name);
 int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym);
 
-SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType);
-SymbolItem HandleDec(Syntax_Leaf* root, Type decType);
-FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType);
-FieldList HandleDefList(Syntax_Leaf* root, FieldList tail);
+HashItem SymbolTable_Create(Syntax_Leaf* root);
+void SymbolTable_Print(HashItem* Symbol_Table);
+void SymbolItem_Print(SymbolItem sym);
+
+SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type);
+SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type);
+FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int deflist_type);
+FieldList HandleDefList(Syntax_Leaf* root, FieldList tail, int deflist_type);
 Type HandleSpecifier(Syntax_Leaf* spe_root);
 
 #endif

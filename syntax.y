@@ -88,6 +88,13 @@ ExtDef : Specifier ExtDecList SEMI {
  	leaf->children[leaf->childrennum++] = $3;
  	$$ = leaf;
  	}
+ | Specifier FunDec SEMI {
+ 	Syntax_Leaf* leaf = Syntax_Leaf_New("ExtDef", @$.first_line, 0);
+ 	leaf->children[leaf->childrennum++] = $1;
+ 	leaf->children[leaf->childrennum++] = $2;
+ 	leaf->children[leaf->childrennum++] = $3;
+ 	$$ = leaf;
+ 	}
  ;
 ExtDecList : VarDec {
  	Syntax_Leaf* leaf = Syntax_Leaf_New("ExtDecList", @$.first_line, 0);

@@ -1,0 +1,6 @@
+struct a 
+{
+	int p;
+	float b[20];
+	int a;
+};

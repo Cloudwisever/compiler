@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include"syntax.tab.h"
+#include"symbol_table.h"
 
 extern FILE* yyin;
 #include"syntax_tree.h"
@@ -113,6 +114,10 @@ int main(int argc, char** argv)
 	if(tree_error != 1)
 	{	
 		Syntax_Tree_Print(Syntax_Root);
+		
+		SymbolTable_Create(Syntax_Root);
+		SymbolTable_Print(symbol_table);
+		
 		Syntax_Tree_Free(Syntax_Root);
 	}
 	return 0;

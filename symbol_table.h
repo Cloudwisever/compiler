@@ -36,9 +36,10 @@ struct SymbolItem_
 	char name[32];
 	Type SymbolType;
 	int initialized;
-	enum {VARIABLE, STRUCTNAME, STRUCTFIELD} kind;//variable: 0 structure name: 1 field type: 2
+	enum {VARIABLE, STRUCTNAME, STRUCTFIELD, FUNC} kind;//variable: 0 structure name: 1 field type: 2 function: 3
 	int lineno; 
-	SymbolItem next;
+	int defined;//function is defined
+	SymbolItem next;//function param
 };
 
 typedef struct HashItem_* HashItem;
@@ -50,7 +51,6 @@ struct HashItem_
 	HashItem next;
 };
 
-
 HashItem symbol_table[TABLE_SIZE];
 
 
@@ -61,6 +61,13 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym);
 HashItem SymbolTable_Create(Syntax_Leaf* root);
 void SymbolTable_Print(HashItem* Symbol_Table);
 void SymbolItem_Print(SymbolItem sym);
+
+void HandleExtDef(Syntax_Leaf* root);
+SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType);
+int CheckTypeEq(Type T1, Type T2);
+int CheckFunDec(SymbolItem F1, SymbolItem F2);
+SymbolItem HandleVarList(Syntax_Leaf* root);
+SymbolItem HandleParamDec(Syntax_Leaf* root);
 
 SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type);
 SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type);

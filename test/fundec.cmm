@@ -2,5 +2,6 @@ struct a
 {
 	int p;
 	float b[20];
-	int a;
 };
+int func(int p1, float p2[31][32], struct a p3[10][13], float p4[31][32], struct a p5[10][13]);
+int func(int p1, float p2[23][12], struct a p3[10][12], float p4[31][32], struct a p5[10][13]);

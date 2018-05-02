@@ -65,6 +65,7 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 				printf("should not be here.\n");
 				returnval = 3;
 			}
+			head = head->next;
 		}
 	}
 	else
@@ -99,7 +100,7 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			printf("unknown type: %s\n", spe_root->content);
 		}
 	}
-	else if (spe_root->children[0]->type == TOKEN_)//StructSpecifier
+	else if (spe_root->children[0]->type == TOKEN_ && strcmp(spe_root->children[1]->name, "OptTag") == 0)//StructSpecifier, declare a structure
 	{
 		newone->kind = STRUCTURE;
 	
@@ -111,7 +112,7 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			
 		newone->u.structure = newfield;
 		
-		HandleDefList(spe_root->children[3], newone->u.structure);
+		HandleDefList(spe_root->children[3], newone->u.structure, STRUCTUREFIELD);
 		
 		char* struct_name = NULL;
 		if(spe_root->children[1] == NULL)//OptTag is empty
@@ -121,12 +122,19 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 		{
 			struct_name = spe_root->children[1]->content;
 			//if the structure has a name, build a symbol table item for it.
-			//SymbolItem newitem = (SymbolItem)malloc(sizeof(struct SymbolItem_));
-			//memset(newitem, 0, sizeof(struct SymbolItem_));
+			SymbolItem newitem = (SymbolItem)malloc(sizeof(struct SymbolItem_));
+			memset(newitem, 0, sizeof(struct SymbolItem_));
 			
-			//strcpy(newitem->name, struct_name);
-			//newitem->SymbolType = newone->u.structure->type;
+			strcpy(newitem->name, struct_name);
+			newitem->SymbolType = newone->u.structure->type;
+			newitem->kind = STRUCTNAME;
+			newitem->lineno = spe_root->children[1]->lineno;
 			
+			int rec = SymbolTable_Add(symbol_table, newitem);
+			if(rec == 2)//error type 16
+			{
+				printf("Error type 16 at Line %i: Duplicated structure name \" %s \".\n", newitem->lineno, newitem->name);
+			}
 		}
 		//head node stores the name of the structure, if it has one.
 		newfield->name = struct_name;
@@ -153,14 +161,18 @@ Type HandleSpecifier(Syntax_Leaf* spe_root)
 			newfield->name = struct_name;	
 		}*/
 	}
+	else if (spe_root->children[0]->type == TOKEN_ && strcmp(spe_root->children[1]->name, "Tag") == 0)//StructSpecifier, use a structure already declared.
+	{
+		
+	}
 	else
 	{
-		printf("unknown Specifier's child: %s\n", spe_root->children[0]->name);
+		printf("unknown Specifier's child: %s\n", spe_root->children[1]->name);
 	}
 	return newone;
 }
 
-FieldList HandleDefList(Syntax_Leaf* root, FieldList tail)
+FieldList HandleDefList(Syntax_Leaf* root, FieldList tail, int deflist_type)
 {
 	Syntax_Leaf* cur_deflist = root;
 
@@ -169,26 +181,33 @@ FieldList HandleDefList(Syntax_Leaf* root, FieldList tail)
 		Syntax_Leaf* def = cur_deflist->children[0];
 		Type defType = HandleSpecifier(def->children[0]);
 		
-		tail = HandleDecList(def->children[1], tail, defType);
+		tail = HandleDecList(def->children[1], tail, defType, deflist_type);
 		
 		cur_deflist = cur_deflist->children[1];
 	}
 	return tail;
 }
-FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType)
+FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int deflist_type)
 {
 	Syntax_Leaf* cur_declist = root;
 	do{
-		SymbolItem dec = HandleDec(cur_declist->children[0], decType);
+		SymbolItem dec = HandleDec(cur_declist->children[0], decType, deflist_type);
 		
-		FieldList newfield = (FieldList)malloc(sizeof(struct FieldList_));
-		memset(newfield, 0, sizeof(struct FieldList_));
+		if(deflist_type == STRUCTUREFIELD || tail != NULL)
+		{
+			dec->type_num = STRUCTFIELD;
+			
+			FieldList newfield = (FieldList)malloc(sizeof(struct FieldList_));
+			memset(newfield, 0, sizeof(struct FieldList_));
 		
-		newfield->name = dec->name;
-		newfield->type = dec->SymbolType;
+			newfield->name = dec->name;
+			newfield->type = dec->SymbolType;
 		
-		tail->next = newfield;
-		tail = newfield;
+			tail->next = newfield;
+			tail = newfield;
+		}
+		else
+			dec->type_num = VARIABLE;
 		
 		cur_declist = cur_declist->children[2];
 	}while(cur_declist != NULL);
@@ -196,20 +215,27 @@ FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType)
 	return tail;
 }			
 
-SymbolItem HandleDec(Syntax_Leaf* root, Type decType)
+SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 {
 	Syntax_Leaf*var_root = root->children[0];
-	SymbolItem var = HandleVarDec(var_root, decType);
+	SymbolItem var = HandleVarDec(var_root, decType,deflist_type);
 	if(root->childrennum == 1)//Dec
 	{
 		var->initialized = 0;
 	}
 	else
+	{
 		var->initialized = 1;
+		
+		if(deflist_type == STRUCTREFIELD)//error 15: trying to initialize field in structure
+		{
+			printf("Error type 15 at Line %i: trying to initialize field \" %s \" in structure.\n", var->lineno, var->name);
+		}
+	}
 	return var;
 }
 
-SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType)
+SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 {
 	Syntax_Leaf* root = var_root;
 	Type cur_type = decType;
@@ -219,12 +245,12 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType)
 		memset(newone, 0, sizeof(struct Type_));
 		
 		newone->kind = ARRAY;
-		newone->u.array.elem = decType;
+		newone->u.array.elem = cur_type;
 		
 		int array_size = 0;
 		if(root->children[2]->type == FLOAT_)//error 12
 		{
-			printf("error 12 at line: %i\n", root->children[2]->lineno);
+			printf("Error type 12 at line %i: \" %s \" is not an integer.\n", root->children[2]->lineno, root->children[2]->name);
 			array_size = 1;
 		}
 		else if(root->children[2]->type == INT_)
@@ -244,8 +270,30 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType)
 		
 		strcpy(newid->name, root->children[0]->content);
 		newid->SymbolType = cur_type;
+		newid->lineno = root->children[0]->lineno;
 
-		SymbolTable_Add(symbol_table, newid);
+		int rec = SymbolTable_Add(symbol_table, newid);
+		if(rec == 2)
+		{
+			SymbolItem conflict = find(symbol_table, newid->name);
+			if(deflist_type == STRUCTUREFIELD)
+			{
+				if(conflict->kind == VARIABLE)
+				{
+					printf("Error type 15 at Line %i:Field \" %s \"'s name has been defined as a variable.\n",root->children[0]->lineno, newid->name);
+				}
+				else if(conflict->kind == STRUCTNAME)
+				{
+					printf("Error type 15 at Line %i:Field \" %s \"'s name has been defined as a structure name.\n",root->children[0]->lineno, newid->name);
+				}
+				else
+					printf("Error type 15 at Line %i:Field \" %s \"'s name has been defined as a field.\n", root->children[0]->lineno, newid->name);
+			}
+			else
+			{
+					printf("Error type 3 at Line %i:Redefined variable \" %s \".\n", root->children[0]->lineno, newid->name);
+			}
+		}
 	}
 	else
 	{

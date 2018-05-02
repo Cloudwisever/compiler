@@ -37,7 +37,8 @@ struct SymbolItem_
 	char name[32];
 	Type SymbolType;
 	int initialized;
-	int type_num;//varible: 0 structure field type: 1 
+	enum {VARIABLE, STRUCTNAME, STRUCTFIELD} kind;//variable: 0 structure name: 1 field type: 2
+	int lineno; 
 	SymbolItem next;
 };
 

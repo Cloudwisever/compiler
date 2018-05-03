@@ -1,6 +1,6 @@
 #ifndef _TREE_H
 #define _TREE_H
-enum{TOKEN_, LEX_, ID_, TYPE_, INT_, FLOAT_};
+enum{TOKEN_, LEX_, ID_, TYPE_, INT_, FLOAT_, LOGICAL_, ASSIGNOP_, ARITH_};
 struct Syntax_Leaf
 {
 	char* name;

@@ -66,7 +66,7 @@ EOL \n
 	return SEMI;
 	}
 {RELOP} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("RELOP", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("RELOP", yylineno, LOGICAL_);
 	yylval.type_leaf = leaf;
 	//printf("RELOP = %s\n", yytext);
 	return RELOP;
@@ -77,38 +77,38 @@ EOL \n
 	return COMMA;
 	}
 {ASSIGNOP} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("ASSIGNOP", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("ASSIGNOP", yylineno, ASSIGNOP_);
 	yylval.type_leaf = leaf;
 	return ASSIGNOP;
 	}
 
 {PLUS} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("PLUS", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("PLUS", yylineno, ARITH_);
 	yylval.type_leaf = leaf;
 	return PLUS;
 	}
 {MINUS} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("MINUS", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("MINUS", yylineno, ARITH_);
 	yylval.type_leaf = leaf;
 	return MINUS;
 	}
 {STAR} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("STAR", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("STAR", yylineno, ARITH_);
 	yylval.type_leaf = leaf;
 	return STAR;
 	}
 {DIV} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("DIV", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("DIV", yylineno, ARITH_);
 	yylval.type_leaf = leaf;
 	return DIV;
 	}
 {AND} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("AND", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("AND", yylineno, LOGICAL_);
 	yylval.type_leaf = leaf;
 	return AND;
 	}
 {OR} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("OR", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("OR", yylineno, LOGICAL_);
 	yylval.type_leaf = leaf;
 	return OR;
 	}
@@ -118,7 +118,7 @@ EOL \n
 	return DOT;
 	}
 {NOT} {
-	Syntax_Leaf* leaf = Syntax_Leaf_New("NOT", yylineno, LEX_);
+	Syntax_Leaf* leaf = Syntax_Leaf_New("NOT", yylineno, LOGICAL_);
 	yylval.type_leaf = leaf;
 	return NOT;
 	}

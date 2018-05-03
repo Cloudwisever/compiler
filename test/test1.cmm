@@ -1,0 +1,17 @@
+int func(int i1)
+{
+	return i1;
+}
+/*
+struct Position
+{
+	float x;
+};
+struct Position
+{
+	float y;
+};*/
+int main()
+{
+	struct Position pos;
+}

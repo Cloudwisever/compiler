@@ -12,7 +12,15 @@ struct b func(int p1, float p2[31][32], struct a p3[10][13], struct b p4[31][32]
 struct b func(int p1, float p2[31][32], struct a p3[10][13], struct b p4[31][32], struct a p5[10][13])
 {
 	int d1 = 2;
-	float d2;
-	struct a d3[12];
-	float p1;
+	float f1;
+	
+	d1 = 3;
+	f1 = 3.5;
+	//d1 = f1;
+	
+	p3[1][2].p = 1;
+	p4[1][3].st[1][4].f[20] = 2.3;
+	
+	j = f1 + 1;
+	
 }

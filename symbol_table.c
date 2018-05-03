@@ -1,6 +1,4 @@
-
 #include "symbol_table.h"
-
 
 unsigned int hash_pjw(char* name)
 {
@@ -90,6 +88,7 @@ void SymbolItem_Print(SymbolItem sym)
 	//printf("printf in print %p %i %s\n", sym->SymbolType, sym->kind, sym->name);
 	//printf("%i\n",sym->SymbolType->kind);
 	printf("%s\t", sym->name);
+	/*
 	if(sym->kind == STRUCTNAME)
 	{
 		printf("STRUCT\t");
@@ -103,12 +102,40 @@ void SymbolItem_Print(SymbolItem sym)
 		printf("FIELD\t");
 	}
 	else if(sym->kind == FUNC)
-	{
+	{rec->name : a
+Error type 3 at Line 12:Redefined variable " p1 ".
+Error type 3 at Line 10:Redefined variable " d2 ".
+tag.
+
 		printf("FUNC\t");
 	}
 	else
 		printf("BAD kind: %i\t", sym->kind);
+	*/	
 	
+	switch(sym->kind)
+	{
+	case VARIABLE:	printf("VAR\t");break;
+	case STRUCTNAME:	printf("STRUCT\t");break;
+	case STRUCTFIELD:printf("FIELD\t");break;
+	case FUNC:	printf("FUNC\t");break;
+	case FUNCDECPARAM:	printf("FUNCDECPARAM\t");break;
+	case FUNCDEFPARAM:	printf("FUNCDEFPARAM\t");break;
+	default: printf("BAD kind: %i\t", sym->kind);
+	}
+	
+	switch(sym->SymbolType->kind)
+	{
+	case BASIC:	
+		if(sym->SymbolType->u.basic == 1)
+			printf("FLOAT\t");
+		else
+			printf("INT\t");
+		break;
+	case ARRAY:	printf("ARRAY\t");break;
+	case STRUCTURE:printf("SRUCTURE\t");break;
+	}
+	/*
 	if(sym->SymbolType->kind == BASIC)
 	{
 		printf("BASIC\t");
@@ -123,7 +150,7 @@ void SymbolItem_Print(SymbolItem sym)
 	}
 	else
 		printf("BAD symbol kind: %i\t", sym->SymbolType->kind);
-
+	*/
 	/*
 	int k = sym->kind;
 	printf("k :%i", k);
@@ -173,13 +200,16 @@ void SymbolTable_Print(HashItem* Symbol_Table)
 	}
 }
 
-		
 
-HashItem SymbolTable_Create(Syntax_Leaf* root)
+void SymbolTable_Create(Syntax_Leaf* root)
 {
 	if(strcmp(root->name, "ExtDef") == 0)
 	{
 		HandleExtDef(root);
+	}
+	 if(strcmp(root->name, "CompSt") == 0)
+	{
+		HandleDefList(root->children[1], NULL, VARIABLE);
 	}
 	int i = 0;
 	while(i < root->childrennum)
@@ -193,30 +223,6 @@ HashItem SymbolTable_Create(Syntax_Leaf* root)
 	}
 }
 
-void HandleExtDef(Syntax_Leaf* root)
-{
-	
-	Type extdefType = HandleSpecifier(root->children[0]);
-	if(strcmp(root->children[1]->name, "ExtDecList") == 0)
-	{
-		//since the ExtDecList is same as DecList, we can just use the HandleDecList() to fill the symbol table.
-		HandleDecList(root->children[1], NULL, extdefType, VARIABLE);
-	}
-	else if(strcmp(root->children[1]->name, "SEMI") == 0)
-	{
-		//to add the structure into the symbol table, the HandleSpecifier() has done that. So no need to do anything.
-	}
-	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "SEMI") == 0)//Function declare
-	{
-		HandleFunDec(root->children[1], extdefType);
-		printf("FunDec handled.\n");
-	}
-	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "CompSt") == 0)//Function Defination
-	{
-		SymbolItem func = HandleFunDec(root->children[1], extdefType);
-		func->defined = 1;
-	}
-}
 
 int CheckTypeEq(Type T1, Type T2)
 {
@@ -232,8 +238,11 @@ int CheckTypeEq(Type T1, Type T2)
 		//printf("checking \n");
 		if(T1->kind == BASIC)
 		{
+			printf("\nT1 basic %i T2 %i\n", T1->u.basic, T2->u.basic);
 			if(T1->u.basic == T2->u.basic)
 				return 1;
+			else
+				return 0;
 		}
 		else if(T1->kind == ARRAY)
 		{
@@ -273,7 +282,7 @@ int CheckTypeEq(Type T1, Type T2)
 			return 0;
 		}
 	}
-}
+}	
 		
 int CheckFunDec(SymbolItem F1, SymbolItem F2)
 {
@@ -288,26 +297,53 @@ int CheckFunDec(SymbolItem F1, SymbolItem F2)
 		return 0;
 	}
 	
-	printf("checking F1 sym %p F2 sym %p\n", F1->SymbolType, F2->SymbolType);
+	printf("checking F1 kind %i F2 kind %i\n", F1->kind, F2->kind);
 	
-	if(CheckTypeEq(F1->SymbolType, F2->SymbolType) == 0)
-	{
-		printf("checking2\n");
-		return 2;
-	}
 	if(F1->kind != F2->kind)
 	{
 	
-	printf("checking3\n");
+		printf("checking3 F1->kind %i F2kind %i\n", F1->kind, F2->kind);
 		return 3;
 	}
-	
-	
-	return CheckFunDec(F1->next, F2->next);
+	while(F1 != NULL && F2 != NULL)
+	{
+		
+		if(CheckTypeEq(F1->SymbolType, F2->SymbolType) == 0)
+		{
+			printf("checking2\n");
+			return 2;
+		}
+		F1 = F1->next; F2 = F2->next;
+	}
+	return 1;
 }
 
+void HandleExtDef(Syntax_Leaf* root)
+{
+	
+	Type extdefType = HandleSpecifier(root->children[0]);
+	if(strcmp(root->children[1]->name, "ExtDecList") == 0)
+	{
+		//since the ExtDecList is same as DecList, we can just use the HandleDecList() to fill the symbol table.
+		HandleDecList(root->children[1], NULL, extdefType, VARIABLE);
+	}
+	else if(strcmp(root->children[1]->name, "SEMI") == 0)
+	{
+		//to add the structure into the symbol table, the HandleSpecifier() has done that. So no need to do anything.
+	}
+	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "SEMI") == 0)//Function declare
+	{
+		SymbolItem func = HandleFunDec(root->children[1], extdefType, FUNCDECPARAM);
+		printf("FunDec handled.\n");
+	}
+	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "CompSt") == 0)//Function Defination
+	{
+		SymbolItem func = HandleFunDec(root->children[1], extdefType, FUNCDEFPARAM);
+		func->initialized = 1;
+	}
+}
 
-SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType)
+SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 {
 	//printf("handling :\n");
 	Syntax_Leaf* id = root->children[0];
@@ -322,7 +358,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType)
 	
 	if(root->children[2]->type == TOKEN_)//varlist
 	{
-		newitem->next = HandleVarList(root->children[2]);
+		newitem->next = HandleVarList(root->children[2], funparam_type);
 		printf("handled varlist\n");
 	}
 	else if(root->children[2]->type == LEX_)//no param
@@ -360,7 +396,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType)
 	}
 	return newitem;
 }
-SymbolItem HandleVarList(Syntax_Leaf* root)
+SymbolItem HandleVarList(Syntax_Leaf* root, int funcparam_type)
 {
 	
 	Syntax_Leaf* varlist = root, *para = root->children[0];
@@ -369,7 +405,7 @@ SymbolItem HandleVarList(Syntax_Leaf* root)
 	{
 		para = varlist->children[0];
 		//printf("\npara.name = %s\n", para->name);
-		SymbolItem newitem = HandleParamDec(para);
+		SymbolItem newitem = HandleParamDec(para, funcparam_type);
 		if(head == NULL)
 		{
 			head = newitem;
@@ -385,12 +421,25 @@ SymbolItem HandleVarList(Syntax_Leaf* root)
 	return head;
 }
 
-SymbolItem HandleParamDec(Syntax_Leaf* root)
+SymbolItem HandleParamDec(Syntax_Leaf* root, int funparam_type)
 {
 	
 	Type paraType = HandleSpecifier(root->children[0]);
 	printf("paraType handled.\n");
-	SymbolItem rec = HandleVarDec(root->children[1], paraType, 0);
+	SymbolItem rec = HandleVarDec(root->children[1], paraType, funparam_type);
+	
+	if(funparam_type == FUNCDECPARAM)
+	{
+		rec->kind = FUNCDECPARAM;
+	}
+	else if(funparam_type == FUNCDEFPARAM)
+	{
+		rec->kind = FUNCDEFPARAM;
+	}
+	else
+	{
+		printf("bad funparam type: %i\n", funparam_type);
+	}	
 	printf("vardec ok.\n");
 	return rec;
 }
@@ -472,25 +521,6 @@ Type HandleSpecifier(Syntax_Leaf* root)//int, float, struct a: deal with memory 
 				printf("Error type 16 at Line %i: Duplicated structure name \" %s \".\n", newitem->lineno, newitem->name);
 			}
 		}
-		/*
-		for(i = 0; i < deflist->childrennum; i++)
-		{
-			FieldList newfield = (FieldList)malloc(sizeof(struct FieldList_));
-			memset(newone, 0, sizeof(struct FieldList_));
-			
-			if(newone->u.structure == NULL)
-			{
-				tail = newfield;
-				newone->u.structure = newfield;
-			}
-			else
-			{
-				tail->next = newfield;
-				tail = newfield;
-			}
-			newfield->type = HandleSpecifier(deflist->children[i]->children[0]);//the first child of Def is Specifier, also the type.
-			newfield->name = struct_name;	
-		}*/
 	}
 	else if (strcmp(spe_root->children[1]->name, "Tag") == 0)//StructSpecifier, use a structure already declared.
 	{
@@ -507,7 +537,7 @@ Type HandleSpecifier(Syntax_Leaf* root)//int, float, struct a: deal with memory 
 		else
 		{
 			SymbolItem rec = rechash->symbol;
-			printf("rec->name : %s\n", rec->name);
+			//printf("rec->name : %s\n", rec->name);
 			newone->kind = rec->SymbolType->kind;
 			newone->u = rec->SymbolType->u;
 		}
@@ -622,6 +652,11 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 		newid->SymbolType = cur_type;
 		newid->lineno = root->children[0]->lineno;
 
+		if(deflist_type == FUNCDECPARAM)//no need to add param in the declaration to symbol table 
+		{	
+			newid->kind = FUNCDECPARAM;
+			return newid;
+		}
 		int rec = SymbolTable_Add(symbol_table, newid);
 		if(rec == 2)
 		{
@@ -653,7 +688,4 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 	return newid;
 }
 		
-
-		
-
 

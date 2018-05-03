@@ -1,7 +1,18 @@
 struct a 
 {
 	int p;
-	float b[20];
+	float f[20];
 };
-int func(int p1, float p2[31][32], struct a p3[10][13], float p4[31][32], struct a p5[10][13]);
-int func(int p1, float p2[23][12], struct a p3[10][12], float p4[31][32], struct a p5[10][13]);
+struct b
+{
+	int t;
+	struct a st[2][3];
+};
+struct b func(int p1, float p2[31][32], struct a p3[10][13], struct b p4[31][32], struct a p5[10][13]);
+struct b func(int p1, float p2[31][32], struct a p3[10][13], struct b p4[31][32], struct a p5[10][13])
+{
+	int d1 = 2;
+	float d2;
+	struct a d3[12];
+	float p1;
+}

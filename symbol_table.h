@@ -35,8 +35,8 @@ struct SymbolItem_
 {
 	char name[32];
 	Type SymbolType;
-	int initialized;
-	enum {VARIABLE, STRUCTNAME, STRUCTFIELD, FUNC} kind;//variable: 0 structure name: 1 field type: 2 function: 3
+	int initialized;//for a function, 0 means not defined, 1 is defined.
+	enum {VARIABLE, STRUCTNAME, STRUCTFIELD, FUNC, FUNCDECPARAM, FUNCDEFPARAM} kind;//variable: 0 structure name: 1 field type: 2 function: 3
 	int lineno; 
 	int defined;//function is defined
 	SymbolItem next;//function param
@@ -58,16 +58,16 @@ unsigned int hash_pjw(char* name);
 HashItem SymbolTable_Find(HashItem *symbol_tab, char* name);
 int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym);
 
-HashItem SymbolTable_Create(Syntax_Leaf* root);
+void SymbolTable_Create(Syntax_Leaf* root);
 void SymbolTable_Print(HashItem* Symbol_Table);
 void SymbolItem_Print(SymbolItem sym);
 
 void HandleExtDef(Syntax_Leaf* root);
-SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType);
+SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int);
 int CheckTypeEq(Type T1, Type T2);
 int CheckFunDec(SymbolItem F1, SymbolItem F2);
-SymbolItem HandleVarList(Syntax_Leaf* root);
-SymbolItem HandleParamDec(Syntax_Leaf* root);
+SymbolItem HandleVarList(Syntax_Leaf* root, int);
+SymbolItem HandleParamDec(Syntax_Leaf* root, int);
 
 SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type);
 SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type);

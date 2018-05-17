@@ -60,7 +60,7 @@ HashItem SymbolTable_Find(HashItem *symbol_tab, char* name);
 int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym);
 
 void SymbolTable_Create(Syntax_Leaf* root);
-void SymbolTable_Print(HashItem* Symbol_Table);
+void SymbolTable_Print(HashItem* Symbol_Table, int opt);
 void SymbolItem_Print(SymbolItem sym);
 void FieldListFillMaster(FieldList field, char* master);
 

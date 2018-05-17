@@ -44,7 +44,7 @@ IF if
 ELSE else
 WHILE while
 INT 0|[1-9][0-9]*
-FLOAT [-]?([0-9]*((\.?[0-9]+)|([0-9]+\.)))
+FLOAT ([0-9]*((\.?[0-9]+)|([0-9]+\.)))
 ID [_a-zA-Z][_0-9a-zA-Z]*
 SPACE " "+|\t+
 

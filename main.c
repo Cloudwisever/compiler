@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 		Syntax_Tree_Print(Syntax_Root);
 		
 		SymbolTable_Create(Syntax_Root);
-		SymbolTable_Print(symbol_table);
+		SymbolTable_Print(symbol_table, 1);
 		
 		Syntax_Tree_Free(Syntax_Root);
 	}

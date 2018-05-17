@@ -23,6 +23,7 @@ unsigned int hash_pjw(char* name)
 HashItem SymbolTable_Find(HashItem *symbol_tab, char* name)
 {
 	int index = hash_pjw(name);
+	//printf("name:%s, hashval: %i\n", name, index);
 	HashItem head = NULL;
 	head = symbol_tab[index];
 	
@@ -41,7 +42,9 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 	int index = hash_pjw(sym->name);
 	
 	HashItem head = symbol_tab[index];
+	//printf("adding:%s\n", sym->name);
 	
+	//printf("inadd: name:%s, hashval: %i\n", sym->name, index);
 	HashItem find = SymbolTable_Find(symbol_tab, sym->name);
 	if(find == NULL)
 	{
@@ -180,10 +183,11 @@ Error type 3 at Line 10:Redefined variable " d2 ".
 	printf("\n");
 }
 
-void SymbolTable_Print(HashItem* Symbol_Table)
+void SymbolTable_Print(HashItem* Symbol_Table, int opt)
 {
 	int i;
-	printf("NAME\tKIND\tTYPE\n");
+	if(opt == 1)
+		printf("NAME\tKIND\tTYPE\n");
 	
 	//HashItem ap = SymbolTable_Find(symbol_table, "p");
 	/*if(ap==NULL)
@@ -198,6 +202,8 @@ void SymbolTable_Print(HashItem* Symbol_Table)
 	for(i = 0; i < TABLE_SIZE; i++)
 	{
 		HashItem cur = Symbol_Table[i];
+		//if(Symbol_Table[i]!=NULL)
+			//printf("%i : name: %s\n", i, Symbol_Table[i]->symbol->name);
 		while(cur != NULL)
 		{
 			//printf("cur: %p, cur->sym->name: %s cur->sym->kind: %i\n",cur, cur->symbol->name, cur->symbol->kind);
@@ -208,7 +214,9 @@ void SymbolTable_Print(HashItem* Symbol_Table)
 					printf("Error type 18 at Line %i: Undefined function \"%s\".\n", cur->symbol->lineno, cur->symbol->name);
 				}
 			}
-			SymbolItem_Print(cur->symbol);
+			if(opt == 1)
+			{	SymbolItem_Print(cur->symbol);
+			}
 			cur = cur->next;
 		}
 	}
@@ -253,7 +261,7 @@ int CheckTypeEq(Type T1, Type T2)
 		//printf("checking \n");
 		if(T1->kind == BASIC)
 		{
-			//printf("\nT1 basic %i T2 %i\n", T1->u.basic, T2->u.basic);
+			printf("\nT1 basic %i T2 %i\n", T1->u.basic, T2->u.basic);
 			if(T1->u.basic == T2->u.basic)
 				return 1;
 			else
@@ -341,7 +349,7 @@ Type HandleExp(Syntax_Leaf* root)
 		
 		if(root->children[1] == NULL)//Exp : ID
 		{
-			printf("ID:%s\n", root->children[0]->content);
+			//printf("ID:%s\n", root->children[0]->content);
 			HashItem idhash = SymbolTable_Find(symbol_table, ID_root->content);
 			if(idhash == NULL)
 			{
@@ -373,7 +381,7 @@ Type HandleExp(Syntax_Leaf* root)
 				{
 					if(strcmp(root->children[2]->name, "Args") == 0)
 					{
-						if(CheckArgs(root->children[2], funcsym) != 1)
+						if(CheckArgs(root->children[2], funcsym->next) != 1)
 						{
 							printf("Error type 9 at Line %i: Function \"%s\" is not applicable for given arguments.\n", ID_root->lineno, ID_root->content);
 							return errINT;
@@ -557,27 +565,31 @@ char* ExpGetName(Syntax_Leaf* root)
 
 int CheckArgs(Syntax_Leaf* root, SymbolItem param)
 {
-	Syntax_Leaf* cur = root;
+	Syntax_Leaf* cur = root, *exp = root->children[0];
 	do
 	{
+		exp = cur->children[0];
 		if(param == NULL)
 		{
-			return 1;
+			return 0;
 		}
 		Type ret = HandleExp(cur->children[0]);
+		printf("ret_type.kind = %i, param-type.kind = %i\n", ret->kind, param->SymbolType->kind); 
 		if(CheckTypeEq(ret, param->SymbolType) != 1)
 		{
+		//printf("ret_type.kind = %i, param-type.kind = %i\n", ret->kind, param->SymbolType->kind); 
 			return 0;
 		}
 		cur = cur->children[2];
 		param = param->next;
-	}while(cur->children[2] != NULL);
+	}while(cur != NULL);
 	if(param == NULL)
 	{
 		return 1;
 	}
 	else
 	{
+		printf("prama name = %s\n,return here\n", param->name);
 		return 0;
 	}
 }
@@ -603,8 +615,19 @@ void HandleExtDef(Syntax_Leaf* root)
 	}
 	else if(strcmp(root->children[1]->name, "FunDec") == 0 && strcmp(root->children[2]->name, "CompSt") == 0)//Function Defination
 	{
+	
+		if(symbol_table[747]!=NULL)
+		{
+			HashItem fun = SymbolTable_Find(symbol_table, "func");
+			if(fun == NULL)
+				printf("\nno func aready.\n");
+			else
+				printf("fun sym: %s\n", fun->symbol->name);
+			printf("what in 747: %s, kind: %i, id : %s\n", symbol_table[747]->symbol->name, symbol_table[747]->symbol->kind, root->children[0]->name);
+		}
 		SymbolItem func = HandleFunDec(root->children[1], extdefType, FUNCDEFPARAM);
 		func->initialized = 1;
+		
 		Type returnType = HandleCompSt(root->children[2], func->SymbolType);
 		if(CheckTypeEq(func->SymbolType, returnType) != 1)
 		{
@@ -664,6 +687,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	Syntax_Leaf* id = root->children[0];
 	
 	SymbolItem newitem = (SymbolItem)malloc(sizeof(struct SymbolItem_));
+	printf("Newitemp:%pn", newitem);
 	memset(newitem, 0, sizeof(struct SymbolItem_));
 		
 	newitem->kind = FUNC;
@@ -674,6 +698,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	if(root->children[2]->type == TOKEN_)//varlist
 	{
 		newitem->next = HandleVarList(root->children[2], funparam_type);
+		
 		//printf("handled varlist\n");
 	}
 	else if(root->children[2]->type == LEX_)//no param
@@ -681,6 +706,15 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 		newitem->next = NULL;
 	}
 	
+		if(symbol_table[747]!=NULL)
+		{
+			HashItem fun = SymbolTable_Find(symbol_table, "func");
+			if(fun == NULL)
+				printf("no func aready.\n");
+			else
+				printf("fun sym: %s\n", fun->symbol->name);
+			printf("\nwhat in 747: %s, kind: %i, id : %s\n", symbol_table[747]->symbol->name, symbol_table[747]->symbol->kind, root->children[0]->name);
+		}
 	HashItem hashp = SymbolTable_Find(symbol_table, newitem->name);
 	if(hashp != NULL)
 	{
@@ -691,7 +725,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 				if(hashp->symbol->initialized == 1)//already defined
 				{
 					printf("Error type 4 at Line %i: Redefined function \"%s\".\n", root->lineno, newitem->name);
-					free(newitem);
+					//free(newitem);
 					//printf("item freed\n");
 					newitem = hashp->symbol;
 					return newitem;
@@ -703,7 +737,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 				}
 				else
 				{
-					free(newitem);
+					//free(newitem);
 					//printf("item freed\n");
 					newitem = hashp->symbol;
 				}
@@ -715,10 +749,13 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 			}
 			else
 			{
-				free(newitem);
+			printf("hashp->symbol problem?%s\n", hashp->symbol->name);
+				//free(newitem);
 				//printf("item freed\n");
+				printf("hashp->symbol problem?%s\n", hashp->symbol->name);
 				newitem = hashp->symbol;
 			}
+			
 			
 		}
 		else
@@ -729,7 +766,8 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	else
 	{
 		SymbolTable_Add(symbol_table, newitem);
-	}
+		
+	}	
 	return newitem;
 }
 SymbolItem HandleVarList(Syntax_Leaf* root, int funcparam_type)
@@ -754,6 +792,7 @@ SymbolItem HandleVarList(Syntax_Leaf* root, int funcparam_type)
 		}
 		varlist = varlist->children[2];
 	}while(varlist != NULL);
+	
 	return head;
 }
 
@@ -917,7 +956,10 @@ FieldList HandleDefList(Syntax_Leaf* root, FieldList tail, int deflist_type)
 	while(cur_deflist != NULL)
 	{
 		Syntax_Leaf* def = cur_deflist->children[0];
+		
 		Type defType = HandleSpecifier(def->children[0]);
+		
+		
 		
 		tail = HandleDecList(def->children[1], tail, defType, deflist_type);
 		
@@ -929,8 +971,8 @@ FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int def
 {
 	Syntax_Leaf* cur_declist = root;
 	do{
+		//printf("deflist_type:%i\n", deflist_type);
 		SymbolItem dec = HandleDec(cur_declist->children[0], decType, deflist_type);
-		
 		if(deflist_type == STRUCTFIELD || tail != NULL)
 		{
 			dec->kind = STRUCTFIELD;
@@ -956,6 +998,7 @@ FieldList HandleDecList(Syntax_Leaf* root, FieldList tail, Type decType, int def
 SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 {
 	Syntax_Leaf*var_root = root->children[0];
+	
 	SymbolItem var = HandleVarDec(var_root, decType,deflist_type);
 	if(root->childrennum == 1)//Dec
 	{
@@ -975,9 +1018,10 @@ SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 
 SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 {
-	//printf("handling vardec at line %i\n", var_root->lineno);
+	printf("handling vardec at line %i\n", var_root->lineno);
 	Syntax_Leaf* root = var_root;
 	Type cur_type = decType;
+	
 	while(root->children[0]->type == TOKEN_)
 	{
 		Type newone = (Type)malloc(sizeof(struct Type_));
@@ -1002,12 +1046,15 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 		root = root->children[0];
 		cur_type = newone;
 	}
-	
 	SymbolItem newid = (SymbolItem)malloc(sizeof(struct SymbolItem_));
 	memset(newid, 0, sizeof(struct SymbolItem_));
 	if(root->children[0]->type == ID_)
 	{
 		
+		if(symbol_table[747]!=NULL)
+		{
+			printf("what in 747: %s, id : %s\n", symbol_table[747]->symbol->name, root->children[0]->content);
+		}
 		strcpy(newid->name, root->children[0]->content);
 		newid->SymbolType = cur_type;
 		newid->lineno = root->children[0]->lineno;
@@ -1017,6 +1064,11 @@ SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 			newid->kind = FUNCDECPARAM;
 			return newid;
 		}
+		if(symbol_table[747]!=NULL)
+		{
+			printf("what in 747: %s, id : %s\n", symbol_table[747]->symbol->name, root->children[0]->content);
+		}
+		//printf("add vardec: newid :%s\n", newid->name);
 		int rec = SymbolTable_Add(symbol_table, newid);
 		if(rec == 2)
 		{

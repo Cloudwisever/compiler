@@ -64,8 +64,10 @@ void SymbolTable_Print(HashItem* Symbol_Table, int opt);
 void SymbolItem_Print(SymbolItem sym);
 void FieldListFillMaster(FieldList field, char* master);
 
+void HandleExtDecList(Syntax_Leaf* root, Type decType);
 void HandleExtDef(Syntax_Leaf* root);
 Type HandleCompSt(Syntax_Leaf* root, Type funcType);
+Type HandleStmt(Syntax_Leaf* root, Type funcType);
 Type HandleStmtList(Syntax_Leaf* root, Type funcType);
 
 SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int);

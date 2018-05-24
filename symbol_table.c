@@ -46,6 +46,9 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 	
 	//printf("inadd: name:%s, hashval: %i\n", sym->name, index);
 	HashItem find = SymbolTable_Find(symbol_tab, sym->name);
+	
+	int addplace = 0;
+	
 	if(find == NULL)
 	{
 		//printf("adding: %s\n", sym->name);
@@ -66,7 +69,11 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 					HashItem newone = (HashItem)malloc(sizeof(struct HashItem_));
 					memset(newone, 0, sizeof(struct HashItem_));
 					newone->symbol = sym;
+					
+					HashItem temp = head->next;
 					head->next = newone;
+					newone->next = temp;
+				
 					return 1;
 				}
 			}
@@ -84,6 +91,7 @@ int SymbolTable_Add(HashItem* symbol_tab, SymbolItem sym)
 				printf("should not be here.\n");
 				returnval = 3;
 			}
+			addplace++;
 			head = head->next;
 		}
 	}
@@ -261,7 +269,7 @@ int CheckTypeEq(Type T1, Type T2)
 		//printf("checking \n");
 		if(T1->kind == BASIC)
 		{
-			printf("\nT1 basic %i T2 %i\n", T1->u.basic, T2->u.basic);
+			//printf("\nT1 basic %i T2 %i\n", T1->u.basic, T2->u.basic);
 			if(T1->u.basic == T2->u.basic)
 				return 1;
 			else
@@ -284,12 +292,16 @@ int CheckTypeEq(Type T1, Type T2)
 		else if(T1->kind == STRUCTURE)
 		{
 			FieldList cur1 = T1->u.structure->next, cur2 = T2->u.structure->next;
-			while(CheckTypeEq(cur1->type,cur2->type) == 1)
+			while(1)
 			{
 				if(strcmp(cur1->name, cur2->name) != 0)
 				{
 					return 0;
 				}
+				//printf("check struct\n");
+				//printf("cur1 basic %i cur2 %i\n", cur1->u.basic, cur2->u.basic);
+				if(CheckTypeEq(cur1->type,cur2->type) != 1)
+					return 0;
 				cur1 = cur1->next;
 				cur2 = cur2->next;
 				if(cur1 == NULL && cur2 == NULL)
@@ -319,6 +331,22 @@ int CheckFunDec(SymbolItem F1, SymbolItem F2)
 		//printf("checking0\n");
 		return 0;
 	}
+	/*
+	SymbolItem ppp = F1;
+	while(ppp != NULL)
+	{
+		printf("F1typekind %i, ", ppp->SymbolType->kind);
+		ppp = ppp->next;
+	}
+	printf("\n");
+	ppp = F2;
+	while(ppp != NULL)
+	{
+		printf("F2typekind %i, ", ppp->SymbolType->kind);
+		ppp = ppp->next;
+	}
+	printf("\n");
+	*/
 	
 	//printf("checking F1 kind %i F2 kind %i\n", F1->kind, F2->kind);
 	
@@ -330,15 +358,18 @@ int CheckFunDec(SymbolItem F1, SymbolItem F2)
 	}
 	while(F1 != NULL && F2 != NULL)
 	{
-		
-		if(CheckTypeEq(F1->SymbolType, F2->SymbolType) == 0)
+		//printf("F1typekind %i, basic %i, f2typekind %i, basic %i\n", F1->SymbolType->kind,F1->SymbolType->u.basic, F2->SymbolType->kind, F2->SymbolType->u.basic);
+		if(CheckTypeEq(F1->SymbolType, F2->SymbolType) != 1)
 		{
 			//printf("checking2\n");
 			return 2;
 		}
 		F1 = F1->next; F2 = F2->next;
 	}
-	return 1;
+	if(F1 == NULL && F2 == NULL)
+		return 1;
+	else
+		return 0;
 }
 
 Type HandleExp(Syntax_Leaf* root)
@@ -384,7 +415,7 @@ Type HandleExp(Syntax_Leaf* root)
 						if(CheckArgs(root->children[2], funcsym->next) != 1)
 						{
 							printf("Error type 9 at Line %i: Function \"%s\" is not applicable for given arguments.\n", ID_root->lineno, ID_root->content);
-							return errINT;
+							return funcsym->SymbolType;
 						}
 						else
 							return funcsym->SymbolType;
@@ -417,7 +448,7 @@ Type HandleExp(Syntax_Leaf* root)
 		//printf("returning float: type %i\n", stdFLOAT->u.basic);	
 		return stdFLOAT;
 	}
-	else if(root->children[0]->type == LEX_)
+	else if(root->children[0]->type == LEX_||root->children[0]->type == ARITH_)//NOT Exp, MINUS Exp
 	{
 		return HandleExp(root->children[1]);
 	}
@@ -485,13 +516,21 @@ Type HandleExp(Syntax_Leaf* root)
 			//check left
 			//printf("assigning. good? at line %i\n", root->children[1]->lineno);
 			int good = 0;
-			if(exp1_root->children[0]->type == ID_)
+			if(exp1_root->children[0]->type == ID_&&exp1_root->children[1] == NULL)//exp is ID, not func
+			{
+				//printf("Line %i, good because left is id\n",exp1_root->children[0]->lineno);
 				good = 1;
+			}
 			else if((strcmp(exp1_root->children[0]->name, "Exp") == 0)&&(strcmp(exp1_root->children[1]->name, "LB") == 0)&&(strcmp(exp1_root->children[2]->name, "Exp") == 0)&&(strcmp(exp1_root->children[3]->name, "RB") == 0))
+			{
+				//printf("Line %i, good because left is Exp LB Exp RB\n",exp1_root->children[0]->lineno);
 				good = 1;
+			}
 			else if((strcmp(exp1_root->children[0]->name, "Exp") == 0)&&(strcmp(exp1_root->children[1]->name, "DOT") == 0)&&(strcmp(exp1_root->children[2]->name, "ID") == 0))
+			{
+				//printf("Line %i, good because left is Exp DOT ID\n",exp1_root->children[0]->lineno);
 				good = 1;
-
+			}
 			//printf("good = %i\n", good);
 			if(good != 1)
 			{
@@ -551,6 +590,7 @@ Type HandleExp(Syntax_Leaf* root)
 	}
 	else
 	{
+		printf("here?Exp type = %i\n",root->children[0]->type);
 		printf("unknown expression : Exp : %s %s %s \n", root->children[0]->name, root->children[1]->name, root->children[2]->name);
 		return errINT;
 	}
@@ -574,7 +614,7 @@ int CheckArgs(Syntax_Leaf* root, SymbolItem param)
 			return 0;
 		}
 		Type ret = HandleExp(cur->children[0]);
-		printf("ret_type.kind = %i, param-type.kind = %i\n", ret->kind, param->SymbolType->kind); 
+		//printf("ret_type.kind = %i, param-type.kind = %i\n", ret->kind, param->SymbolType->kind); 
 		if(CheckTypeEq(ret, param->SymbolType) != 1)
 		{
 		//printf("ret_type.kind = %i, param-type.kind = %i\n", ret->kind, param->SymbolType->kind); 
@@ -593,7 +633,18 @@ int CheckArgs(Syntax_Leaf* root, SymbolItem param)
 		return 0;
 	}
 }
-
+void HandleExtDecList(Syntax_Leaf* root, Type decType)
+{
+	Syntax_Leaf* cur = root, *vardec = root->children[0];
+	do
+	{
+		vardec = cur->children[0];
+		
+		HandleVarDec(vardec, decType, VARIABLE);
+		
+		cur = cur->children[2];
+	}while(cur != NULL);
+}
 
 void HandleExtDef(Syntax_Leaf* root)
 {
@@ -601,8 +652,10 @@ void HandleExtDef(Syntax_Leaf* root)
 	Type extdefType = HandleSpecifier(root->children[0]);
 	if(strcmp(root->children[1]->name, "ExtDecList") == 0)
 	{
-		//since the ExtDecList is same as DecList, we can just use the HandleDecList() to fill the symbol table.
-		HandleDecList(root->children[1], NULL, extdefType, VARIABLE);
+		//since the ExtDecList is same as DecList, we can just use the HandleDecList() to fill the symbol table.IT IS WRONG!!!!!!
+		//TRUTH IS: DecList->Dec->VarDec, HOWEVER, ExtDecList->VarDec!!!!!!
+		//HandleDecList(root->children[1], NULL, extdefType, VARIABLE);
+		HandleExtDecList(root->children[1], extdefType);
 	}
 	else if(strcmp(root->children[1]->name, "SEMI") == 0)
 	{
@@ -641,41 +694,48 @@ Type HandleCompSt(Syntax_Leaf* root, Type funcType)//returns the return type of 
 	HandleDefList(root->children[1], NULL, VARIABLE);
 	return HandleStmtList(root->children[2], funcType);
 }
+Type HandleStmt(Syntax_Leaf* root, Type funcType)
+{
+	int i = 0;
+	Syntax_Leaf* stmt = root;
+	if(strcmp(stmt->children[0]->name,"CompSt") == 0)
+	{
+		HandleCompSt(stmt->children[0], funcType);
+	}
+	if(strcmp(stmt->children[0]->name,"RETURN") == 0)
+	{
+		Type thisreturn = HandleExp(stmt->children[1]);
+		//printf("thisreturn.basic = %i\n", thisreturn->u.basic);
+		if(CheckTypeEq(funcType, thisreturn) != 1)
+		{
+			printf("Error type 8 at Line %i: Type mismatched for return.\n", stmt->lineno);
+		}
+	}
+	else
+	{
+		while(i < stmt->childrennum)
+		{
+			if(stmt->children[i] == NULL)
+			{
+				i++;
+				continue;
+			}
+				if(strcmp(stmt->children[i]->name,"Exp") == 0)
+					HandleExp(stmt->children[i]);
+				else if(strcmp(stmt->children[i]->name,"Stmt") == 0)
+					HandleStmt(stmt->children[i], funcType);
+				i++;
+		}
+	}
+}
 Type HandleStmtList(Syntax_Leaf* root, Type funcType)
 {
 	Syntax_Leaf* stmtlist = root, *stmt;
 	while(stmtlist != NULL)
 	{
 		stmt = stmtlist->children[0];
-		int i = 0;
 		//printf("name: %s\n",stmtlist->children[0]->name);
-		if(strcmp(stmt->children[0]->name,"CompSt") == 0)
-		{
-			HandleCompSt(stmt->children[0], funcType);
-		}
-		if(strcmp(stmt->children[0]->name,"RETURN") == 0)
-		{
-			Type thisreturn = HandleExp(stmt->children[1]);
-			//printf("thisreturn.basic = %i\n", thisreturn->u.basic);
-			if(CheckTypeEq(funcType, thisreturn) != 1)
-			{
-				printf("Error type 8 at Line %i: Type mismatched for return.\n", stmt->lineno);
-			}
-		}
-		else
-		{
-			while(i < stmt->childrennum)
-			{
-				if(stmt->children[i] == NULL)
-				{
-					i++;
-					continue;
-				}
-					if(strcmp(stmt->children[i]->name,"Exp") == 0)
-						HandleExp(stmt->children[i]);
-					i++;
-			}
-		}
+		HandleStmt(stmt, funcType);
 		stmtlist = stmtlist->children[1];
 	}
 	return funcType;
@@ -687,7 +747,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	Syntax_Leaf* id = root->children[0];
 	
 	SymbolItem newitem = (SymbolItem)malloc(sizeof(struct SymbolItem_));
-	printf("Newitemp:%pn", newitem);
+	//printf("Newitemp:%pn", newitem);
 	memset(newitem, 0, sizeof(struct SymbolItem_));
 		
 	newitem->kind = FUNC;
@@ -705,8 +765,16 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	{
 		newitem->next = NULL;
 	}
-	
-		if(symbol_table[747]!=NULL)
+	/*
+	SymbolItem ppp = newitem->next;
+	while(ppp != NULL)
+	{
+		//printf("varlisttypekind %i, ", ppp->SymbolType->kind);
+		ppp = ppp->next;
+	}
+	printf("\n");
+	*/
+	/*	if(symbol_table[747]!=NULL)
 		{
 			HashItem fun = SymbolTable_Find(symbol_table, "func");
 			if(fun == NULL)
@@ -715,6 +783,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 				printf("fun sym: %s\n", fun->symbol->name);
 			printf("\nwhat in 747: %s, kind: %i, id : %s\n", symbol_table[747]->symbol->name, symbol_table[747]->symbol->kind, root->children[0]->name);
 		}
+		*/
 	HashItem hashp = SymbolTable_Find(symbol_table, newitem->name);
 	if(hashp != NULL)
 	{
@@ -733,6 +802,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 				else if(CheckFunDec(hashp->symbol, newitem) != 1)
 				{
 					printf("Error type 19 at Line %i: Inconsisitent declarction of function \"%s\".\n", root->lineno, newitem->name);
+					hashp->symbol->initialized = 1;
 					//printf("checkfundec returns %i\n", CheckFunDec(hashp->symbol, newitem));
 				}
 				else
@@ -741,22 +811,33 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 					//printf("item freed\n");
 					newitem = hashp->symbol;
 				}
-			}	
-			if(CheckFunDec(hashp->symbol, newitem) != 1)
-			{
-				printf("Error type 19 at Line %i: Inconsisitent declarction of function \"%s\".\n", root->lineno, newitem->name);
+			}
+			else//declaring a function
+			{	
+				/*SymbolItem ppp = hashp->symbol->next;
+				while(ppp != NULL)
+				{
+					printf("hashvarlisttypekind %i, ", ppp->SymbolType->kind);
+					ppp = ppp->next;
+				}
+				printf("\n");
+				printf("declare check:%s\n", newitem->name);
+				
+				*/
+				if(CheckFunDec(hashp->symbol, newitem) != 1)
+				{
+					printf("Error type 19 at Line %i: Inconsisitent declarction of function \"%s\".\n", root->lineno, newitem->name);
 				//printf("checkfundec returns %i\n", CheckFunDec(hashp->symbol, newitem));
+				}
+				else
+				{
+					//printf("hashp->symbol problem?%s\n", hashp->symbol->name);
+					//free(newitem);
+					//printf("item freed\n");
+					//printf("hashp->symbol problem?%s\n", hashp->symbol->name);
+					newitem = hashp->symbol;
+				}
 			}
-			else
-			{
-			printf("hashp->symbol problem?%s\n", hashp->symbol->name);
-				//free(newitem);
-				//printf("item freed\n");
-				printf("hashp->symbol problem?%s\n", hashp->symbol->name);
-				newitem = hashp->symbol;
-			}
-			
-			
 		}
 		else
 		{
@@ -765,6 +846,7 @@ SymbolItem HandleFunDec(Syntax_Leaf* root, Type returnType, int funparam_type)
 	}
 	else
 	{
+		//printf("first add %s in line %i\n", newitem->name, root->lineno);
 		SymbolTable_Add(symbol_table, newitem);
 		
 	}	
@@ -1018,7 +1100,7 @@ SymbolItem HandleDec(Syntax_Leaf* root, Type decType, int deflist_type)
 
 SymbolItem HandleVarDec(Syntax_Leaf* var_root, Type decType, int deflist_type)
 {
-	printf("handling vardec at line %i\n", var_root->lineno);
+	//printf("handling vardec at line %i\n", var_root->lineno);
 	Syntax_Leaf* root = var_root;
 	Type cur_type = decType;
 	
